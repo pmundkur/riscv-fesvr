@@ -13,11 +13,13 @@ using namespace std::placeholders;
 
 device_t::device_t()
   : command_handlers(command_t::MAX_COMMANDS),
-    command_names(command_t::MAX_COMMANDS)
+    command_names(command_t::MAX_COMMANDS),
+    init_done(false)
 {
   for (size_t cmd = 0; cmd < command_t::MAX_COMMANDS; cmd++)
     register_command(cmd, std::bind(&device_t::handle_null_command, this, _1), "");
   register_command(command_t::MAX_COMMANDS-1, std::bind(&device_t::handle_identify, this, _1), "identity");
+  init_done = true;
 }
 
 void device_t::register_command(size_t cmd, command_func_t handler, const char* name)
@@ -26,10 +28,13 @@ void device_t::register_command(size_t cmd, command_func_t handler, const char* 
   assert(strlen(name) < IDENTITY_SIZE);
   command_handlers[cmd] = handler;
   command_names[cmd] = name;
+  if (init_done)
+    std::cerr << "device " << identity() << ": registered cmd " << name << std::endl;
 }
 
 void device_t::handle_command(command_t cmd)
 {
+  std::cerr << "device " << identity() << ": handling cmd " << command_names[cmd.cmd()] << std::endl;
   command_handlers[cmd.cmd()](cmd);
 }
 
@@ -140,11 +145,15 @@ void device_list_t::register_device(device_t* dev)
 {
   num_devices++;
   assert(num_devices < command_t::MAX_DEVICES);
+  std::cerr << "registering device %" << (num_devices - 1)
+            << ": " << dev->identity() << std::endl;
   devices[num_devices-1] = dev;
 }
 
 void device_list_t::handle_command(command_t cmd)
 {
+  if (cmd.device() != 1)
+    std::cout << "dispatching htif cmd to device #" << (int)cmd.device() << std::endl;
   devices[cmd.device()]->handle_command(cmd);
 }
 

@@ -103,6 +103,7 @@ std::string syscall_t::undo_chroot(const char* fn)
 
 void syscall_t::handle_syscall(command_t cmd)
 {
+  std::cerr << "handling potential syscall" << std::endl;
   if (cmd.payload() & 1) // test pass/fail
   {
     htif->exitcode = cmd.payload();

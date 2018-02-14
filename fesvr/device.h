@@ -55,6 +55,7 @@ class device_t
 
   std::vector<command_func_t> command_handlers;
   std::vector<std::string> command_names;
+  bool init_done;
 };
 
 class bcd_t : public device_t

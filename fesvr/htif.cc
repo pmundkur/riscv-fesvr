@@ -120,6 +120,8 @@ void htif_t::load_program()
   if (symbols.count("tohost") && symbols.count("fromhost")) {
     tohost_addr = symbols["tohost"];
     fromhost_addr = symbols["fromhost"];
+    std::cerr << "tohost   <- 0x" << std::hex << tohost_addr   << std::endl;
+    std::cerr << "fromhost <- 0x" << std::hex << fromhost_addr << std::endl;
   } else {
     fprintf(stderr, "warning: tohost and fromhost symbols not in ELF; can't communicate with target\n");
   }
@@ -171,6 +173,8 @@ int htif_t::run()
 {
   start();
 
+  std::cerr << "Running!" << std::endl;
+
   auto enq_func = [](std::queue<reg_t>* q, uint64_t x) { q->push(x); };
   std::queue<reg_t> fromhost_queue;
   std::function<void(reg_t)> fromhost_callback =
@@ -184,6 +188,7 @@ int htif_t::run()
   while (!signal_exit && exitcode == 0)
   {
     if (auto tohost = mem.read_uint64(tohost_addr)) {
+      std::cerr << "htif: dispatching target req ..." << std::endl;
       mem.write_uint64(tohost_addr, 0);
       command_t cmd(mem, tohost, fromhost_callback);
       device_list.handle_command(cmd);
@@ -194,10 +199,16 @@ int htif_t::run()
     device_list.tick();
 
     if (!fromhost_queue.empty() && mem.read_uint64(fromhost_addr) == 0) {
+      std::cerr << "htif: dispatching host resp ..." << std::endl;
       mem.write_uint64(fromhost_addr, fromhost_queue.front());
       fromhost_queue.pop();
     }
   }
+
+  if (signal_exit)
+    std::cerr << "Stopping (signal_exit)!" << std::endl;
+  else
+    std::cerr << "Stopping (exit " << exitcode << ")!" << std::endl;
 
   stop();
 
@@ -206,6 +217,8 @@ int htif_t::run()
 
 bool htif_t::done()
 {
+  if (stopped)
+    std::cerr << "Stopped!" << std::endl;
   return stopped;
 }
 
